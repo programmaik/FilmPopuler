@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Film Populer</string>
+    <string name="movie_poster_image_description">Movie Poster Image</string>
+    <string name="movie_detail_tagline">Tagline</string>
+    <string name="movie_detail_duration">Duration</string>
+    <string name="movie_detail_overview">Overview</string>
+
+    <string name="movie_backdrop_image_description">movie backdrop image</string>
+
+    <string name="tools_text_rating">4.6</string>
+    <string name="tools_release_date">29 January 2017</string>
+    <string name="tools_title">Title</string>
+
+    <string name="lorem_ipsum">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec tempus justo leo, maximus vehicula ipsum mattis eu. Sed at eleifend quam. Cras vitae consequat magna, vitae lobortis erat. Etiam in mi vitae metus mattis gravida quis cursus diam. Praesent luctus justo vel ullamcorper eleifend. Vestibulum dictum purus nec turpis facilisis, vel tincidunt ex consequat. Morbi a erat eu lacus aliquam elementum. Nam pretium mauris id lorem vehicula finibus.</string>
+
+</resources>
