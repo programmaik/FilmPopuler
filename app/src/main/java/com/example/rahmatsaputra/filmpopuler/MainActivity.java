@@ -378,7 +378,7 @@ public class MainActivity extends AppCompatActivity{
                 if (AddOrDeleteFavoriteMovieContract.ACTION_ADD_FAVORITE.equals(action) || AddOrDeleteFavoriteMovieContract.ACTION_DELETE_FAVORITE.equals(action)){
                     if (currentState == STATE_FAVORITE_MOVIE){
                         getSupportLoaderManager().restartLoader(
-                                FavoriteMovieLoader.FAVORITE_MOVIE_LOADER_ID,null,favoriteList
+                                ListFavoriteMovieLoader.FAVORITE_MOVIE_LIST_LOADER_ID,null,favoriteList
                         );
                     }
                 }
