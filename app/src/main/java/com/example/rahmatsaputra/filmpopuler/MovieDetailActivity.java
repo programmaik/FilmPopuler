@@ -1,13 +1,16 @@
 package com.example.rahmatsaputra.filmpopuler;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Parcelable;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -25,6 +28,8 @@ import com.example.rahmatsaputra.filmpopuler.data.db.DatabaseHelper;
 import com.example.rahmatsaputra.filmpopuler.data.db.MovieRepository;
 import com.example.rahmatsaputra.filmpopuler.data.model.MovieData;
 import com.example.rahmatsaputra.filmpopuler.data.model.MovieDetail;
+import com.example.rahmatsaputra.filmpopuler.features.main.contract.AddOrDeleteFavoriteMovieContract;
+import com.example.rahmatsaputra.filmpopuler.features.main.service.AddOrDeleteFavoriteMovieService;
 import com.example.rahmatsaputra.filmpopuler.utils.AnimationUtils;
 import com.squareup.picasso.Picasso;
 
@@ -56,6 +61,7 @@ public class MovieDetailActivity extends AppCompatActivity implements AppBarLayo
 
     SimpleDateFormat dateFormat = new SimpleDateFormat("d MMM yyy", Locale.getDefault());
     MovieRepository movieRepository;
+    AddOrDeleteBroadcastReceiver addOrDeleteBroadcastReceiver;
 
     TextView tvMovieName, tvReleaseDate, tvDescription, tvMovieRating, tvMovieTagline, tvDuration, toolbarTitleView;
     ImageView posterImageView,movieBackdropView;
@@ -79,7 +85,7 @@ public class MovieDetailActivity extends AppCompatActivity implements AppBarLayo
 
         @Override
         public void onLoadFinished(Loader<Boolean> loader, Boolean favored) {
-            favoriteButton.setEnabled(true);
+            enableFavoriteButton();
             isFavored = favored;
             if (isFavored){
                 setFavoriteImage();
@@ -116,11 +122,31 @@ public class MovieDetailActivity extends AppCompatActivity implements AppBarLayo
         viewBinding();
         processIntent();
 
-        movieRepository = DatabaseHelper.getInstance(this);
-
         setUpToolbar();
         setUpDetails();
         setUpMovieDetail();
+
+        addOrDeleteBroadcastReceiver = new AddOrDeleteBroadcastReceiver();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(AddOrDeleteFavoriteMovieContract.ACTION_ADD_FAVORITE);
+        intentFilter.addAction(AddOrDeleteFavoriteMovieContract.ACTION_DELETE_FAVORITE);
+        LocalBroadcastManager.getInstance(this).registerReceiver(addOrDeleteBroadcastReceiver, intentFilter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(addOrDeleteBroadcastReceiver);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
     private void processIntent() {
@@ -186,7 +212,7 @@ public class MovieDetailActivity extends AppCompatActivity implements AppBarLayo
                     .load(TmdbConstant.IMAGE_BASE_URL + "w780/" + movieData.getBackdropPath())
                     .into(movieBackdropView);
         }
-        favoriteButton.setEnabled(false);
+        disableFavoriteButton();
         getSupportLoaderManager().initLoader(
                 FavoriteMovieLoader.FAVORITE_MOVIE_LOADER_ID,null,favoriteMovieCallback
         );
@@ -199,25 +225,32 @@ public class MovieDetailActivity extends AppCompatActivity implements AppBarLayo
         favoriteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Intent favoriteIntent = new Intent(MovieDetailActivity.this, AddOrDeleteFavoriteMovieService.class);
+
                 if (isFavored) {
-                    isFavored = false;
-                    movieRepository.removeFavoriteMovie(movieId);
-                    setNonFavoriteImage();
+                    favoriteIntent.setAction(AddOrDeleteFavoriteMovieContract.ACTION_DELETE_FAVORITE);
+                    favoriteIntent.putExtra(AddOrDeleteFavoriteMovieContract.EXTRA_MOVIE_ID, movieId);
                 } else {
-                    isFavored = true;
-                    movieRepository.addFavoriteMovie(movieData);
-                    setFavoriteImage();
+                    favoriteIntent.setAction(AddOrDeleteFavoriteMovieContract.ACTION_ADD_FAVORITE);
+                    favoriteIntent.putExtra(AddOrDeleteFavoriteMovieContract.EXTRA_MOVIE_DATA, movieData);
                 }
+                startService(favoriteIntent);
+                disableFavoriteButton();
             }
         });
     }
 
     private void setNonFavoriteImage() {
-        favoriteButton.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+        if (favoriteButton != null) {
+            favoriteButton.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+        }
     }
 
+
     private void setFavoriteImage() {
-        favoriteButton.setImageResource(R.drawable.ic_favorite_white_24dp);
+        if(favoriteButton != null){
+            favoriteButton.setImageResource(R.drawable.ic_favorite_white_24dp);
+        }
     }
 
     @Override
@@ -360,6 +393,36 @@ public class MovieDetailActivity extends AppCompatActivity implements AppBarLayo
                 } if (result){
                     setFavoriteImage();
                 } else  {
+                    setNonFavoriteImage();
+                }
+            }
+        }
+    }
+
+    private void enableFavoriteButton() {
+        if (favoriteButton != null) {
+            favoriteButton.setEnabled(true);
+        }
+    }
+
+    private void disableFavoriteButton() {
+        if (favoriteButton != null) {
+            favoriteButton.setEnabled(false);
+        }
+    }
+    private class AddOrDeleteBroadcastReceiver extends BroadcastReceiver{
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(intent != null){
+                final String action = intent.getAction();
+                Log.d(TAG, "onReceive: " + action);
+                enableFavoriteButton();
+                if(AddOrDeleteFavoriteMovieContract.ACTION_ADD_FAVORITE.equals(action)){
+                    isFavored = true;
+                    setFavoriteImage();
+                } else if(AddOrDeleteFavoriteMovieContract.ACTION_DELETE_FAVORITE.equals(action)){
+                    isFavored = false;
                     setNonFavoriteImage();
                 }
             }
