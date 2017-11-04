@@ -18,9 +18,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import static com.example.rahmatsaputra.filmpopuler.features.main.contract.TopRatedMovieListContract.EXTRA_MOVIE_DATA;
-import static com.example.rahmatsaputra.filmpopuler.features.main.contract.TopRatedMovieListContract.EXTRA_SHOW_EMPTY_MOVIE_LIST;
-import static com.example.rahmatsaputra.filmpopuler.features.main.contract.TopRatedMovieListContract.SHOW_MESSAGE;
+
 import static com.example.rahmatsaputra.filmpopuler.features.main.contract.TopRatedMovieListContract.SHOW_MOVIE_LIST;
 /**
  * Created by RahmatSaputra on 03/11/2017.
