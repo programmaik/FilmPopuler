@@ -42,9 +42,7 @@ public class TopRatedMovieListLoader extends AsyncTaskLoader<List<MovieData>> {
     @Override
     public List<MovieData> loadInBackground() {
         List<MovieData> result = new ArrayList<>();
-        //Call<MovieDataResponse> movieDataResponse = TmdbService.open().getTopRatedMovies(1);
         MovieDataResponse data = new MovieDataResponse();
-        //List<MovieData> movieDataList;
         try{
             result.addAll(data.getMovieDataList());
         } catch (Exception e){

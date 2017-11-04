@@ -4,9 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Parcelable;
 import android.support.annotation.NonNull;
-import android.support.design.internal.BottomNavigationItemView;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -16,13 +14,10 @@ import android.os.Bundle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.View;
-import android.view.Window;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.view.Menu;
 import android.view.MenuItem;
 
 import com.example.rahmatsaputra.filmpopuler.data.api.TmdbService;
@@ -32,8 +27,11 @@ import com.example.rahmatsaputra.filmpopuler.data.model.MovieDataResponse;
 import com.example.rahmatsaputra.filmpopuler.features.main.adapter.MainAdapter;
 import com.example.rahmatsaputra.filmpopuler.features.main.contract.AddOrDeleteFavoriteMovieContract;
 import com.example.rahmatsaputra.filmpopuler.features.main.contract.MainListItemClickListener;
+import com.example.rahmatsaputra.filmpopuler.features.main.contract.TopRatedMovieListContract;
 import com.example.rahmatsaputra.filmpopuler.features.main.model.MainItem;
 import com.example.rahmatsaputra.filmpopuler.features.main.model.MovieItem;
+import com.example.rahmatsaputra.filmpopuler.features.main.service.AddOrDeleteFavoriteMovieService;
+import com.example.rahmatsaputra.filmpopuler.features.main.service.TopRatedMovieListService;
 import com.example.rahmatsaputra.filmpopuler.utils.converter.MovieDataToMainItemConverter;
 
 import java.util.Collections;
@@ -60,22 +58,26 @@ public class MainActivity extends AppCompatActivity{
     BottomNavigationView bottomNavigationView;
 
     FavoriteBroadcastReceiver favoriteBroadcastReceiver;
+    TopRatedMovieListReceiver topRatedMovieListReceiver;
     MainListItemClickListener mainListItemClickListener;
     GridLayoutManager layoutManager;
     Toast toast;
     MovieRepository movieRepository;
     List<MovieData> movieDataList;
+    MovieData movieData;
     int currentState = STATE_POPULAR_MOVIE;
 
     public static final String KEY_MOVIENAME ="movieName";
     public static final String KEY_RELEASEDATE = "releaseDate";
     public static final String KEY_POSTERPATH = "posterPath";
     public static final String KEY_DESCRIPTION = "overview";
-
+    public static final String KEY_MOVIE_DATA = "MOVIE_DATA";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        movieData = getIntent().getParcelableExtra(KEY_MOVIE_DATA);
 
         getSupportActionBar().hide();
         if (savedInstanceState != null) {
@@ -87,16 +89,24 @@ public class MainActivity extends AppCompatActivity{
         if (currentState == STATE_POPULAR_MOVIE) {
             fetchPopularMovie();
         } else if (currentState == STATE_FAVORITE_MOVIE){
-            fetchFavoriteMovie();
+            //fetchFavoriteMovie();
+            fetchFavoriteMovieService();
         } else {
-            fetchTopRatedMovieLoader();
+            //fetchTopRatedMovieLoader();
+            fetchTopRatedMovieService();
         }
+        IntentFilter intentFilter = new IntentFilter();
 
         favoriteBroadcastReceiver = new FavoriteBroadcastReceiver();
-        IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(AddOrDeleteFavoriteMovieContract.ACTION_ADD_FAVORITE);
         intentFilter.addAction(AddOrDeleteFavoriteMovieContract.ACTION_DELETE_FAVORITE);
         LocalBroadcastManager.getInstance(this).registerReceiver(favoriteBroadcastReceiver, intentFilter);
+
+        topRatedMovieListReceiver = new TopRatedMovieListReceiver();
+        intentFilter.addAction(TopRatedMovieListContract.SHOW_MOVIE_LIST);
+        LocalBroadcastManager.getInstance(this).registerReceiver(topRatedMovieListReceiver, intentFilter);
+
+
 
     }
 
@@ -168,7 +178,6 @@ public class MainActivity extends AppCompatActivity{
         }
     };
 
-
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -178,6 +187,7 @@ public class MainActivity extends AppCompatActivity{
     @Override
     public void onDestroy(){
         super.onDestroy();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(topRatedMovieListReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(favoriteBroadcastReceiver);
     }
 
@@ -226,10 +236,12 @@ public class MainActivity extends AppCompatActivity{
                     fetchPopularMovie();
                 } else if (menuId == R.id.action_favorites){
                     currentState = STATE_FAVORITE_MOVIE;
-                    fetchFavoriteMovie();
+                    //fetchFavoriteMovie();
+                    fetchFavoriteMovieService();
                 } else {
                     currentState = STATE_TOPRATE_MOVIE;
-                    fetchTopRatedMovieLoader();
+                    //fetchTopRatedMovieLoader();
+                    fetchTopRatedMovieService();
                 }
                 return true;
             }
@@ -357,6 +369,14 @@ public class MainActivity extends AppCompatActivity{
         );
     }
 
+    private void fetchFavoriteMovieService(){
+        favoriteBroadcastReceiver = new FavoriteBroadcastReceiver();
+        Intent favoriteIntent = new Intent(MainActivity.this, AddOrDeleteFavoriteMovieService.class);
+        favoriteIntent.setAction(AddOrDeleteFavoriteMovieContract.ACTION_ADD_FAVORITE);
+        favoriteIntent.setAction(AddOrDeleteFavoriteMovieContract.ACTION_DELETE_FAVORITE);
+        startService(favoriteIntent);
+    }
+
     // Dengan AsyncTaskLoader
     private void fetchTopRatedMovieLoader(){
         showProgressBar();
@@ -369,6 +389,12 @@ public class MainActivity extends AppCompatActivity{
         );
 
     }
+
+    private void fetchTopRatedMovieService(){
+        Intent topRatedIntent = new Intent(MainActivity.this, TopRatedMovieListService.class);
+        topRatedIntent.setAction(TopRatedMovieListContract.SHOW_MOVIE_LIST);
+        startService(topRatedIntent);
+    }
     class FavoriteBroadcastReceiver extends BroadcastReceiver{
 
         @Override
@@ -377,8 +403,31 @@ public class MainActivity extends AppCompatActivity{
                 final String action = intent.getAction();
                 if (AddOrDeleteFavoriteMovieContract.ACTION_ADD_FAVORITE.equals(action) || AddOrDeleteFavoriteMovieContract.ACTION_DELETE_FAVORITE.equals(action)){
                     if (currentState == STATE_FAVORITE_MOVIE){
+                        showProgressBar();
+                        hideMessage();
+                        hideMovieList();
                         getSupportLoaderManager().restartLoader(
                                 ListFavoriteMovieLoader.FAVORITE_MOVIE_LIST_LOADER_ID,null,favoriteList
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    class TopRatedMovieListReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null){
+                final String action = intent.getAction();
+                if(TopRatedMovieListContract.SHOW_MOVIE_LIST.equals(action)){
+                    if (currentState == STATE_TOPRATE_MOVIE){
+                        showProgressBar();
+                        hideMessage();
+                        hideMovieList();
+                        getSupportLoaderManager().restartLoader(
+                        TopRatedMovieListLoader.TOPRATED_MOVIE_LIST_LOADER_ID,null,topRatedMovieList
                         );
                     }
                 }

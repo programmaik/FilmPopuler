@@ -24,6 +24,8 @@
             android:theme="@style/FitAppTheme"></activity>
         <service android:name=".features.main.service.AddOrDeleteFavoriteMovieService"
             android:exported="false"/>
+        <service android:name=".features.main.service.TopRatedMovieListService"
+            android:exported="false" />
     </application>
 
 </manifest>
